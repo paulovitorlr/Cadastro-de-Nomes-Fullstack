@@ -4,49 +4,76 @@ namespace PessoaAPI.Rotas
 {
     public static class PessoaRotas
     {
-        public static List<Pessoa> Pessoas = new List<Pessoa>()
+       
+        public static List<Pessoa> Pessoas = new()
         {
-            new Pessoa(Guid.NewGuid(), nome:"Paulo"),
-            new Pessoa(Guid.NewGuid(), nome:"Vitor"),
+            new Pessoa(Guid.NewGuid(), "Paulo"),
+            new Pessoa(Guid.NewGuid(), "Vitor"),
         };
+
         public static void MapPessoasRotas(this WebApplication app)
         {
-            app.MapGet("/pessoas", handler:() => Pessoas);
+            var pessoasRouter = app.MapGroup("/pessoas");
 
-            app.MapGet("pessoas/{nome}",
-                handler: (string nome) => Pessoas.Find(x => x.Nome == nome));
+            pessoasRouter.MapGet("/", GetAllPessoas);
+            pessoasRouter.MapGet("/{id}", GetPessoa);
+            pessoasRouter.MapPost("/", CreatePessoa);
+            pessoasRouter.MapPut("/{id}", UpdatePessoa);
+            pessoasRouter.MapDelete("/{id}", DeletePessoa);
+        }
 
-            app.MapPost("pessoas",
-                (Pessoa pessoa) =>
-                {
-                    Pessoas.Add(pessoa);
-                    return pessoa;
-                });
+       
+        static IResult GetAllPessoas()
+        {
+            return Results.Ok(Pessoas);
+        }
 
-            app.MapPut("/pessoas/{id}", (Guid id, Pessoa pessoa) =>
-            {
-                var encontrado = Pessoas.Find(x => x.Id == id);
+       
+        static IResult GetPessoa(Guid id)
+        {
+            var pessoa = Pessoas.FirstOrDefault(x => x.Id == id);
 
-                if (encontrado == null)
-                    return Results.NotFound();
+            return pessoa is not null
+                ? Results.Ok(pessoa)
+                : Results.NotFound();
+        }
 
-                encontrado.Nome = pessoa.Nome;
+        
+        static IResult CreatePessoa(Pessoa pessoa)
+        {
+            
+            pessoa.Id = Guid.NewGuid();
 
-                return Results.Ok();
+            Pessoas.Add(pessoa);
 
-            });
+            return Results.Created($"/pessoas/{pessoa.Id}", pessoa);
+        }
 
-            app.MapDelete("/pessoas/{id}", (Guid id) =>
-            {
-                var pessoa = Pessoas.FirstOrDefault(x => x.Id == id);
+        
+        static IResult UpdatePessoa(Guid id, Pessoa inputPessoa)
+        {
+            var pessoa = Pessoas.FirstOrDefault(x => x.Id == id);
 
-                if (pessoa == null)
-                    return Results.NotFound();
+            if (pessoa is null)
+                return Results.NotFound();
 
-                Pessoas.Remove(pessoa);
+            pessoa.Nome = inputPessoa.Nome;
 
-                return Results.NoContent();
-            });
+            return Results.NoContent();
+        }
+
+       
+        static IResult DeletePessoa(Guid id)
+        {
+            var pessoa = Pessoas.FirstOrDefault(x => x.Id == id);
+
+            if (pessoa is null)
+                return Results.NotFound();
+
+            Pessoas.Remove(pessoa);
+
+            return Results.NoContent();
         }
     }
 }
+//testando
